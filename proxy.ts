@@ -1,7 +1,13 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-export async function updateSession(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  // No hacemos verificación en el servidor porque el auth es client-side
+  if (request.nextUrl.pathname.startsWith("/admin") && request.nextUrl.pathname !== "/admin/login") {
+    // Permitir acceso, la verificación se hace en el cliente
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -51,12 +57,18 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Solo redirige a login de admin si intenta acceder sin autenticación
-  if (request.nextUrl.pathname.startsWith("/admin") && request.nextUrl.pathname !== "/admin/login") {
-    // No podemos verificar localStorage en el servidor, así que permitimos el acceso
-    // La verificación se hace en el cliente con useEffect
-    return NextResponse.next()
-  }
-
   return supabaseResponse
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 }
