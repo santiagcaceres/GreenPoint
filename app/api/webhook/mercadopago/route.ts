@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase/server"
-import { getPaymentInfo } from "@/lib/mercadopago"
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,9 +7,16 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Webhook de Mercado Pago recibido:", body)
 
+    if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+      console.warn("MERCADOPAGO_ACCESS_TOKEN no configurado, ignorando webhook")
+      return NextResponse.json({ received: true, message: "MP not configured" })
+    }
+
     // Mercado Pago envía notificaciones de tipo "payment"
     if (body.type === "payment") {
       const paymentId = body.data.id
+
+      const { getPaymentInfo } = await import("@/lib/mercadopago")
 
       // Obtener información completa del pago
       const payment = await getPaymentInfo(paymentId)
@@ -19,6 +25,8 @@ export async function POST(request: NextRequest) {
 
       const orderId = payment.external_reference
       const status = payment.status
+
+      console.log(`[v0] Orden ${orderId} actualizada a estado: ${status}`)
 
       // Actualizar estado de la orden en la base de datos
       const supabase = await createServerClient()

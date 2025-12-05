@@ -77,7 +77,19 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
+    const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.VERCEL_URL || "http://localhost:3000"
+
+    if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+      console.warn("MERCADOPAGO_ACCESS_TOKEN no está configurado")
+
+      // Retornar respuesta de desarrollo sin Mercado Pago
+      return NextResponse.json({
+        orderId: order.id,
+        totalAmount,
+        message: "Mercado Pago no configurado - modo de desarrollo",
+        mockCheckout: true,
+      })
+    }
 
     const preference = await createPreference({
       items: mpItems,
@@ -101,6 +113,12 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("[v0] Error en checkout:", error)
-    return NextResponse.json({ error: "Error al procesar el checkout" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Error al procesar el checkout",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

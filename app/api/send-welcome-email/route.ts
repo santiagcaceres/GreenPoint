@@ -1,7 +1,14 @@
 import { Resend } from "resend"
 import { type NextRequest, NextResponse } from "next/server"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Función helper para obtener Resend solo cuando se necesita
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is not configured")
+  }
+  return new Resend(apiKey)
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +17,16 @@ export async function POST(request: NextRequest) {
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 })
     }
+
+    if (!process.env.RESEND_API_KEY) {
+      console.warn("RESEND_API_KEY no está configurado, saltando envío de email")
+      return NextResponse.json({
+        success: true,
+        message: "Email sending is not configured",
+      })
+    }
+
+    const resend = getResendClient()
 
     const { data, error } = await resend.emails.send({
       from: "Greenpoint <onboarding@resend.dev>", // Change to your verified domain
