@@ -2,28 +2,17 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { createBrowserClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { CartButton } from "@/components/cart-button"
 import { User, Package, Leaf } from "lucide-react"
 
 export function Header() {
-  const [user, setUser] = useState<any>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
-    const supabase = createBrowserClient()
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-    })
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
+    // Check simple localStorage auth
+    const token = localStorage.getItem("simple-auth-token")
+    setIsLoggedIn(!!token)
   }, [])
 
   return (
@@ -44,7 +33,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
-          {user ? (
+          {isLoggedIn ? (
             <>
               <Button asChild variant="ghost" size="sm">
                 <Link href="/my-orders">
@@ -52,8 +41,16 @@ export function Header() {
                   Mis pedidos
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="sm" className="bg-transparent">
-                <Link href="/auth/logout">Cerrar sesión</Link>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-transparent"
+                onClick={() => {
+                  localStorage.removeItem("simple-auth-token")
+                  setIsLoggedIn(false)
+                }}
+              >
+                Cerrar sesión
               </Button>
             </>
           ) : (
